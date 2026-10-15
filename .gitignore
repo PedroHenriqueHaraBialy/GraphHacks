@@ -1,0 +1,16 @@
+# Segredos
+.env
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Node
+node_modules/
+
+# Editores / SO
+.vscode/
+.idea/
+.DS_Store

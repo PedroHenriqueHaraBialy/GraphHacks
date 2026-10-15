@@ -1,0 +1,16 @@
+services:
+  falkordb:
+    image: falkordb/falkordb:latest   # antes de entregar, fixe uma versao (tag) estavel
+    container_name: falkordb
+    ports:
+      - "6379:6379"   # servidor
+      - "3000:3000"   # FalkorDB Browser (interface visual)
+    environment:
+      - REDIS_ARGS=--requirepass ${FALKORDB_PASSWORD:-falkordb} --appendonly yes
+      - FALKORDB_ARGS=THREAD_COUNT 4
+    volumes:
+      - falkordb_data:/data
+    restart: unless-stopped
+
+volumes:
+  falkordb_data:
