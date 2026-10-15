@@ -9,7 +9,7 @@ services:
       - REDIS_ARGS=--requirepass ${FALKORDB_PASSWORD:-falkordb} --appendonly yes
       - FALKORDB_ARGS=THREAD_COUNT 4
     volumes:
-      - falkordb_data:/data
+      - falkordb_data:/var/lib/falkordb/data
     restart: unless-stopped
 
 volumes:
