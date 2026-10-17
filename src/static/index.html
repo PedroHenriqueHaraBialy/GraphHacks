@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Incident Graph Agent</title>
+<style>
+  :root {
+    color-scheme: dark;
+    --bg: #0b0d12; --panel: #131720; --panel-2: #181d28; --line: #262d3b;
+    --text: #e6e9f0; --muted: #98a2b6; --accent: #7c8cff;
+    --c-servico: #4f8cff; --c-equipe: #34c38f; --c-pessoa: #f2b24c; --c-incidente: #ef5b6b;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font: 15px/1.55 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+  .wrap { max-width: 1280px; margin: 0 auto; padding: 28px 24px 56px; }
+  header h1 { margin: 0 0 4px; font-size: 26px; letter-spacing: -0.01em; }
+  header p { margin: 0; color: var(--muted); }
+  form { display: flex; gap: 10px; margin: 22px 0 10px; }
+  input[type=text] {
+    flex: 1; padding: 13px 16px; border-radius: 10px; border: 1px solid var(--line);
+    background: var(--panel); color: var(--text); font: inherit;
+  }
+  input[type=text]:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+  button {
+    padding: 0 22px; border: 0; border-radius: 10px; background: var(--accent);
+    color: #0b0d12; font: inherit; font-weight: 600; cursor: pointer;
+  }
+  button:disabled { opacity: .55; cursor: wait; }
+  .examples { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 18px; }
+  .chip {
+    background: var(--panel); color: var(--muted); border: 1px solid var(--line);
+    padding: 6px 12px; border-radius: 999px; font-size: 13px; font-weight: 400;
+  }
+  .chip:hover { color: var(--text); border-color: var(--accent); }
+  .modo { display: flex; gap: 10px; align-items: flex-start; color: var(--muted); font-size: 14px; margin: 4px 0 14px; cursor: pointer; }
+  .modo input { margin-top: 4px; accent-color: var(--accent); }
+  .modo strong { color: var(--text); }
+  .chip.acao { border-style: dashed; }
+  .badge { display: inline-block; font-size: 11px; font-weight: 700; letter-spacing: .06em; padding: 1px 8px; border-radius: 999px; background: #3b2a12; color: #f2b24c; margin-right: 8px; }
+  #status { min-height: 24px; color: var(--muted); margin-bottom: 8px; }
+  #status.erro { color: #ff8b97; }
+  .grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr); gap: 18px; }
+  @media (max-width: 1000px) { .grid { grid-template-columns: 1fr; } }
+  section.card { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 18px 20px; }
+  section.card h2 { margin: 0 0 12px; font-size: 13px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+  .placeholder { color: var(--muted); }
+  #resposta h3, #resposta h4, #resposta h5 { margin: 18px 0 8px; }
+  #resposta h3:first-child { margin-top: 0; }
+  #resposta p, #resposta ul, #resposta ol { margin: 8px 0; }
+  #resposta code, pre {
+    font: 13px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  }
+  #resposta code { background: var(--panel-2); padding: 1px 6px; border-radius: 5px; }
+  .table-wrap { overflow-x: auto; margin: 10px 0; }
+  table { border-collapse: collapse; width: 100%; font-size: 14px; }
+  th, td { text-align: left; padding: 7px 10px; border-bottom: 1px solid var(--line); }
+  th { color: var(--muted); font-weight: 600; }
+  #grafo svg { width: 100%; height: auto; display: block; }
+  .legend { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 10px; color: var(--muted); font-size: 13px; }
+  .legend i { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 6px; }
+  .k-servico { fill: var(--c-servico); } .k-equipe { fill: var(--c-equipe); }
+  .k-pessoa { fill: var(--c-pessoa); } .k-incidente { fill: var(--c-incidente); }
+  .edge { stroke: #5b6578; stroke-width: 1.6; color: #5b6578; }
+  .edge-label { fill: var(--muted); font-size: 11px; text-anchor: middle; paint-order: stroke; stroke: var(--panel); stroke-width: 4px; }
+  .node-label { fill: var(--text); text-anchor: middle; paint-order: stroke; stroke: var(--panel); stroke-width: 4px; }
+  .no, .aresta { transition: opacity .15s; }
+  .apagado { opacity: .12; }
+  .no { cursor: default; }
+  button.leg { background: transparent; color: var(--muted); border: 1px solid var(--line); padding: 3px 11px; border-radius: 999px; font-weight: 400; font-size: 13px; cursor: pointer; }
+  button.leg:hover { color: var(--text); border-color: var(--accent); }
+  button.leg[aria-pressed="false"] { opacity: .45; text-decoration: line-through; }
+  .legend { align-items: center; }
+  .foco { stroke: #fff; stroke-width: 3; }
+  .novo { stroke: #7cf0b5; stroke-width: 3; stroke-dasharray: 5 3; }
+  .edge.novo { stroke: #7cf0b5; stroke-width: 2.4; stroke-dasharray: none; color: #7cf0b5; }
+  .trace { margin-top: 18px; }
+  details { border: 1px solid var(--line); border-radius: 10px; margin-bottom: 8px; background: var(--panel-2); }
+  summary { cursor: pointer; padding: 10px 14px; font-weight: 600; }
+  summary span { color: var(--muted); font-weight: 400; margin-left: 8px; }
+  .consulta { padding: 0 14px 12px; }
+  pre { margin: 6px 0; padding: 10px 12px; background: var(--bg); border: 1px solid var(--line); border-radius: 8px; overflow-x: auto; white-space: pre-wrap; }
+  .meta { color: var(--muted); font-size: 13px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Incident Graph Agent</h1>
+    <p>Pergunte sobre servi&ccedil;os, depend&ecirc;ncias, equipes e incidentes. O agente consulta o grafo no FalkorDB e mostra o caminho percorrido.</p>
+  </header>
+
+  <form id="form">
+    <input type="text" id="pergunta" maxlength="500" autocomplete="off"
+           aria-label="Pergunta para o agente"
+           placeholder="Ex.: O que quebra se o servico pagamentos cair? Quem devo acionar?">
+    <button type="submit" id="botao">Perguntar</button>
+  </form>
+  <label class="modo">
+    <input type="checkbox" id="agir">
+    <span><strong>Modo a&ccedil;&atilde;o</strong>: permite que o agente <em>grave</em> no grafo (registrar incidentes e atribuir respons&aacute;veis). Desligado, ele s&oacute; consulta.</span>
+  </label>
+  <div class="examples" id="exemplos"></div>
+  <div id="status" role="status" aria-live="polite"></div>
+
+  <div class="grid">
+    <section class="card">
+      <h2>Resposta</h2>
+      <div id="resposta"><span class="placeholder">A resposta do agente aparece aqui.</span></div>
+    </section>
+    <section class="card">
+      <h2>Caminho percorrido no grafo</h2>
+      <div id="grafo"><span class="placeholder">O subgrafo consultado aparece aqui.</span></div>
+      <div class="legend" id="legenda"></div>
+    </section>
+  </div>
+
+  <section class="card trace">
+    <h2>Consultas Cypher executadas</h2>
+    <div id="trace"><span class="placeholder">As consultas feitas no FalkorDB aparecem aqui.</span></div>
+  </section>
+</div>
+<script src="/static/app.js"></script>
+</body>
+</html>
